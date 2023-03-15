@@ -57,6 +57,8 @@ Open ports, allow traffic on: SSH(22) ; 8545(HTTP based JSON RPC API) 8546(WebSo
 
 #### Install
 
+Geth users are required to install and run a consensus client. Otherwise, Geth will not be able to track the head of the chain.
+
 Client : [Lighthouse](https://lighthouse-book.sigmaprime.io/)
 
 ```bash
@@ -76,7 +78,7 @@ openssl rand -hex 32 | tr -d "\n" > jwttoken
 sudo chmod +r jwttoken
 ```
 
-### Configuring Geth
+<!-- ### Configuring Geth
 
 [See : Configuring Geth](https://geth.ethereum.org/docs/getting-started/consensus-clients)
 
@@ -123,31 +125,119 @@ exit
 Create a systemd service config file to configure the Geth node service
 
 ```bash
- sudo nano /etc/systemd/system/geth.service
+ sudo nano /etc/systemd/system/geth.service -->
 ```
 
 ### Running Geth
 
 ```bash
 # Run Nodes on the terminal
-# Run the execution client
-geth --goerli --datadir /home/bjeab/.ethereum/goerli/ --http --http.api eth,net,web3,txpool,engine,admin --authrpc.jwtsecret /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken -authrpc.addr localhost --authrpc.port 8551 --authrpc.vhosts localhost --metrics --metrics.expensive
+# Run the execution client, by default :  --syncmode snap
+geth --goerli --datadir /home/bjeab/.ethereum/goerli/ --http --http.api eth,net,web3,txpool,engine,admin --authrpc.jwtsecret /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --metrics --metrics.expensive
 
-geth --goerli --http --http --metrics --metrics.expensive --pprof --authrpc.jwtsecret=/home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken
 # Run the beacon node using lighthouse
 cd ~/.ethereum/goerli/consensus/lighthouse
 
 ./lighthouse bn --network goerli --execution-endpoint http://localhost:8551 --metrics --validator-monitor-auto --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --http --disable-deposit-contract-sync --purge-db
 ```
 
-Execution node sync status
+## Connect to the Geth console and extract last block number
 
-```bash
+Execution node [sync status](https://geth.ethereum.org/docs/fundamentals/sync-modes)
+
+```geth
 geth version
 geth --goerli attach
-eth.syncing
-eth.getBlock('latest').number
 ```
+
+Watch the last block with this command:
+
+```geth
+> eth.getBlock('latest').number
+8659221
+```
+
+If the value is 0, it's just charging blocks then use:
+
+```geth
+#To watch the current charged block
+eth.syncing
+#if false => it's updated
+```
+
+![gethStatus](captures/gethStatus.PNG)
+
+## Connect to the Geth console and show events data from a specific transaction
+
+Watch a specific transaction with this command:
+
+```geth
+# Tx is the transaction
+eth.getTransaction("#Tx")
+```
+
+![getTransaction](captures/getTransaction.PNG)
+
+### Create a quick Smart Contract and Interact with it
+
+Configure hardhat to deploy a smart contract through your node
+
+```javascript
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+var API_KEY = process.env.API_KEY;
+var PRIVATE_KEY = process.env.PRIVATE_KEY;
+module.exports = {
+  solidity: {
+    version: "0.8.17",
+    settings : {
+      optimizer : {
+        enabled: true,
+        runs: 200
+      }
+    },
+  },
+  networks: {
+    goerli: {
+      url:`https://goerli.infura.io/v3/${API_KEY}`,
+      //url: `https://eth-goerli.g.alchemy.com/v2/${API_KEY}`,
+      chainId: 5,
+      accounts :[`${PRIVATE_KEY}`],
+    },
+    goerliPvNode: {
+      url:`http://localhost:8545`,
+      //url: `https://eth-goerli.g.alchemy.com/v2/${API_KEY}`,
+      chainId: 5,
+      accounts :[`${PRIVATE_KEY}`],
+    },
+    mumbai: {
+      url:`https://polygon-mumbai.infura.io/v3/${API_KEY}`,
+      //url:`https://polygon-mumbai.g.alchemy.com/v2/${API_KEY}`,
+      chainId: 80001,
+      accounts :[`${PRIVATE_KEY}`],
+    },
+  },
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+    gasPrice: 21
+  }
+};
+```
+
+```bash
+# Deploy contract
+npx hardhat run scripts/deploy.js --network goerliPvNode
+```
+
+```cmd
+#response
+network goerliPvNode
+0x0591F951415Dc471Aa948A49E9Fe752ACB028E9B
+Tokenization address: 0x10E0640875817EeFe75F3414522Ae9faa334BFca
+```
+
+Smart Contract addresse [0x10E0640875817EeFe75F3414522Ae9faa334BFca](https://goerli.etherscan.io/address/0x10e0640875817eefe75f3414522ae9faa334bfca)
 
 ## Documentation
 
