@@ -78,57 +78,7 @@ openssl rand -hex 32 | tr -d "\n" > jwttoken
 sudo chmod +r jwttoken
 ```
 
-<!-- ### Configuring Geth
-
-[See : Configuring Geth](https://geth.ethereum.org/docs/getting-started/consensus-clients)
-
-#### Users
-
-Create a 'goeth' user, assign the proper permissions, and where the geth will run
-
-```bash
-sudo useradd --no-create-home --shell /bin/false goeth
-```
-
-Add admin to the 'goeth' group with read-only privileges
-
-```bash
-sudo adduser admin goeth
-```
-
-```bash
-sudo reboot
-```
-
-Create a bitcoin directory
-
-The owner will be 'bitcoin'
-
-```bash
-sudo chown -R bitcoin:bitcoin /mnt/ext/
-```
-
-Create the directory
-
-```bash
-sudo su - goeth
-cd /mnt/ext
-mkdir bitcoin
-ls -la
-```
-
-Quit the 'goeth' session
-
-```bash
-exit
-
-Create a systemd service config file to configure the Geth node service
-
-```bash
- sudo nano /etc/systemd/system/geth.service -->
-```
-
-### Running Geth
+### Running Geth & the Consensus Client
 
 ```bash
 # Run Nodes on the terminal
@@ -138,7 +88,7 @@ geth --goerli --datadir /home/bjeab/.ethereum/goerli/ --http --http.api eth,net,
 # Run the beacon node using lighthouse
 cd ~/.ethereum/goerli/consensus/lighthouse
 
-./lighthouse bn --network goerli --execution-endpoint http://localhost:8551 --metrics --validator-monitor-auto --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --http --disable-deposit-contract-sync --purge-db
+./lighthouse bn --network goerli --execution-endpoint http://localhost:8551 --metrics --validator-monitor-auto --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --http --disable-deposit-contract-sync
 ```
 
 ## Connect to the Geth console and extract last block number
@@ -167,7 +117,7 @@ eth.syncing
 
 ![gethStatus](captures/gethStatus.PNG)
 
-## Connect to the Geth console and show events data from a specific transaction
+### Connect to the Geth console and show events data from a specific transaction
 
 Watch a specific transaction with this command:
 
@@ -239,6 +189,179 @@ Tokenization address: 0x10E0640875817EeFe75F3414522Ae9faa334BFca
 
 Smart Contract addresse [0x10E0640875817EeFe75F3414522Ae9faa334BFca](https://goerli.etherscan.io/address/0x10e0640875817eefe75f3414522ae9faa334bfca)
 
+## Configuring Geth
+
+[See : Configuring Geth](https://geth.ethereum.org/docs/getting-started/consensus-clients)
+
+<!-- ### Users
+
+Create a 'goeth' user, assign the proper permissions, and where the geth will run
+
+```bash
+sudo useradd --no-create-home --shell /bin/false goeth
+```
+
+Add admin to the 'goeth' group with read-only privileges
+
+```bash
+sudo adduser admin goeth
+```
+
+```bash
+sudo reboot
+```
+
+Create a goeth directory
+
+The owner will be 'goeth'
+
+```bash
+sudo chown -R goeth:goeth /mnt/ext/
+```
+
+Create the directory
+
+```bash
+sudo su - goeth
+cd /mnt/ext
+mkdir goeth
+ls -la
+```
+
+Quit the 'goeth' session
+
+```bash
+exit
+``` -->
+
+### Turning Geth into a service
+
+Create a systemd service config file to configure the Geth node service
+
+```bash
+sudo nano /etc/systemd/system/geth.service
+```
+
+Paste this configuration file into it and save once done (Ctrl + X, Y, Enter):
+
+``` bash
+[Unit]
+Description=Go Ethereum Client - Geth (Goerli)
+After=network.target
+Wants=network.target
+
+[Service]
+#User=goeth
+#Group=goeth
+Type=simple
+Restart=always
+RestartSec=5
+TimeoutStopSec=180
+ExecStart=geth \
+    --goerli \
+    --http \
+    --http.api eth,net,web3,txpool,engine,admin \
+    --datadir /home/bjeab/.ethereum/goerli/ \
+    --metrics \
+    --metrics.expensive \
+    --pprof \
+    --authrpc.jwtsecret=/home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+#(reload to reflect the changes)
+sudo systemctl daemon-reload
+#(lauch)
+sudo systemctl start geth.service
+#(check)
+sudo systemctl status geth.service
+#(to stop/restart)
+sudo systemctl stop geth.service
+sudo systemctl restart geth.service
+#(You can enable/disable the geth service to automatically start on reboot)
+sudo systemctl enable geth.service
+sudo systemctl disable geth.service
+```
+
+To monitor you can check the geth.service status with :
+
+```bash
+systemctl status geth
+#Or
+journalctl -fu geth
+sudo journalctl -f -u geth.service -o cat | ccze -A
+#Press Ctrl + C to stop showing those messages.
+```
+
+![gethService](captures/gethService.PNG)
+
+### Turning Lighthouse into a service
+
+Create a systemd service config file to configure the Lighthouse consensus node service
+
+```bash
+sudo nano /etc/systemd/system/lighthouse.service
+```
+
+Paste this configuration file into it and save once done (Ctrl + X, Y, Enter):
+
+``` bash
+[Unit]
+Description=Lighthouse Ethereum Client Beacon Node (Prater)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+# User=lighthousebeacon
+# Group=lighthousebeacon
+Restart=always
+RestartSec=5
+ExecStart=/home/bjeab/.ethereum/goerli/consensus/lighthouse/lighthouse bn \
+    --network goerli \
+    --datadir /home/bjeab/.ethereum/goerli/ \
+    --http \
+    --execution-endpoint http://localhost:8551 \
+    --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io \
+    --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken \
+    --metrics \
+    --validator-monitor-auto \
+    --disable-deposit-contract-sync
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+#(reload to reflect the changes)
+sudo systemctl daemon-reload
+#(lauch)
+sudo systemctl start lighthouse.service
+#(check)
+sudo systemctl status lighthouse.service
+#(to stop/restart)
+sudo systemctl stop lighthouse.service
+sudo systemctl restart lighthouse.service
+#(You can enable/disable the lighthouse service to automatically start on reboot)
+sudo systemctl enable lighthouse.service
+sudo systemctl disable lighthouse.service
+```
+
+To monitor you can check the lighthouse.service status with :
+
+```bash
+systemctl status lighthouse
+#Or
+journalctl -fu lighthouse
+sudo journalctl -f -u lighthouse.service -o cat | ccze -A 
+#Press Ctrl + C to stop showing those messages.
+```
+
+![lighthouseService](captures/lighthouseService.PNG)
+
 ## Documentation
 
 - [Quicknode installation](https://www.quicknode.com/guides/infrastructure/node-setup/how-to-install-and-run-a-geth-node/)
@@ -272,4 +395,6 @@ Smart Contract addresse [0x10E0640875817EeFe75F3414522Ae9faa334BFca](https://goe
 - <https://github.com/redek-zelton/TD3---Running-a-GETH-node>
 - <https://lighthouse-book.sigmaprime.io/run_a_node.html>
 - <https://www.google.com/search?client=firefox-b-d&q=INFO+UPnP+not+available++++++++++++++++++++++error%3A+IO+error%3A+Resource+temporarily+unavailable+%28os+error+11%29%2C+service%3A+UPnP>
+- https://askubuntu.com/questions/1379425/system-has-not-been-booted-with-systemd-as-init-system-pid-1-cant-operate
+- https://github.com/microsoft/WSL/issues/8883
 - -->
