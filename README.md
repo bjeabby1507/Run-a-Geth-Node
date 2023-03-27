@@ -84,11 +84,46 @@ sudo chmod +r jwttoken
 # Run Nodes on the terminal
 # Run the execution client, by default :  --syncmode snap
 geth --goerli --datadir /home/bjeab/.ethereum/goerli/ --http --http.api eth,net,web3,txpool,engine,admin --authrpc.jwtsecret /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --metrics --metrics.expensive
+```
 
+You can create a Bash execute file, once done (Ctrl + X, Y, Enter)
+
+```bash
+cd ~
+mkdir run
+nano ~/run/geth.sh  
+```
+
+```bash
+#[geth]
+#!/bin/bash
+geth --goerli --datadir /home/bjeab/.ethereum/goerli/ --http --http.api eth,net,web3,txpool,engine,admin --authrpc.jwtsecret /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --metrics --metrics.expensive
+```
+
+```bash
 # Run the beacon node using lighthouse
 cd ~/.ethereum/goerli/consensus/lighthouse
 
 ./lighthouse bn --network goerli --execution-endpoint http://localhost:8551 --metrics --validator-monitor-auto --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --http --disable-deposit-contract-sync
+```
+
+You can also create a Bash execute file, once done (Ctrl + X, Y, Enter)
+
+```bash
+ nano ~/run/lighthouse.sh  
+```
+
+```bash
+#[lighthouse]
+#!/bin/bash
+/home/bjeab/.ethereum/goerli/consensus/lighthouse/lighthouse bn --network goerli --execution-endpoint http://localhost:8551 --metrics --validator-monitor-auto --checkpoint-sync-url https://checkpoint-sync.goerli.ethpandaops.io --execution-jwt /home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken --http --disable-deposit-contract-sync
+```
+
+Start with :
+
+```bash
+/bin/bash /home/bjeab/run/geth.sh
+/bin/bash /home/bjeab/run/lighthouse.sh
 ```
 
 ## Connect to the Geth console and extract last block number
@@ -195,43 +230,22 @@ Smart Contract addresse [0x10E0640875817EeFe75F3414522Ae9faa334BFca](https://goe
 
 <!-- ### Users
 
+Reminder: User refers to a being or unit responsible for editing, managing, and manipulating files and operations.
+
 Create a 'goeth' user, assign the proper permissions, and where the geth will run
 
 ```bash
 sudo useradd --no-create-home --shell /bin/false goeth
+#check
+getent passwd | grep goeth
 ```
 
-Add admin to the 'goeth' group with read-only privileges
+Link to the geth goerli directory (/home/bjeab/.ethereum/goerli) , the owner will be 'goeth'
 
 ```bash
-sudo adduser admin goeth
-```
-
-```bash
-sudo reboot
-```
-
-Create a goeth directory
-
-The owner will be 'goeth'
-
-```bash
-sudo chown -R goeth:goeth /mnt/ext/
-```
-
-Create the directory
-
-```bash
-sudo su - goeth
-cd /mnt/ext
-mkdir goeth
-ls -la
-```
-
-Quit the 'goeth' session
-
-```bash
-exit
+sudo chown -R goeth:goeth /home/bjeab/.ethereum/goerli
+#check 
+ls -l /home/bjeab/.ethereum/
 ``` -->
 
 ### Turning Geth into a service
@@ -251,8 +265,6 @@ After=network.target
 Wants=network.target
 
 [Service]
-#User=goeth
-#Group=goeth
 Type=simple
 Restart=always
 RestartSec=5
@@ -316,8 +328,6 @@ After=network-online.target
 
 [Service]
 Type=simple
-# User=lighthousebeacon
-# Group=lighthousebeacon
 Restart=always
 RestartSec=5
 ExecStart=/home/bjeab/.ethereum/goerli/consensus/lighthouse/lighthouse bn \
@@ -370,31 +380,6 @@ sudo journalctl -f -u lighthouse.service -o cat | ccze -A
 - [Set up Firewall](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-firewall-with-ufw-on-ubuntu-20-04-fr)
 - [go-ethereum](https://github.com/ethereum/go-ethereum)
 - [Ethereum public endpoints](https://eth-clients.github.io/checkpoint-sync-endpoints/)
-<!-- - <https://geth.ethereum.org/docs/fundamentals/command-line-options>
-- <https://consensys.net/blog/teku/teku-and-infura-team-up-to-make-the-fastest-ethereum-2-0-client-sync/>
--<https://ethereum.stackexchange.com/questions/142870/how-do-i-expose-and-beacon-chain-api-securely-over-http-and-test-my-api-works>
 - [Tuto Besu/Teku](https://github.com/eth-educators/ethstaker-guides/blob/main/merge-goerli-prater-alt.md)
-- <https://ethereum.org/en/staking/pools/>
-- <https://lighthouse-book.sigmaprime.io/faq.html>
-- <https://geth.ethereum.org/docs/fundamentals/peer-to-peer>
-
--<https://www.quicknode.com/guides/infrastructure/node-setup/how-to-run-a-hyperledger-besu-node/>
-
-- <https://aubay.udemy.com/course/blockchain-developer/learn/lecture/8798024#overview>
-- <https://geth.ethereum.org/docs/getting-started>
-- <https://www.alchemy.com/overviews/what-is-a-geth-node-and-how-to-run-one>
-- <https://cryptomarketpool.com/getting-started-with-geth-to-run-an-ethereum-node/>
-- <https://medium.com/@cvcassano/setting-up-a-full-ethereum-node-with-rpc-and-debug-support-geth-316517a1fdc>
-- <https://rpcfast.com/blog/how-to-install-and-run-geth-node>
-- <https://dev.to/yongchanghe/tutorial-play-with-geth-go-ethereum-4gic>
-- <https://www.youtube.com/watch?v=ftS-SlzCCn4>
-- <https://www.youtube.com/watch?v=3H-KmO7Ce4I>
-- <https://www.youtube.com/watch?v=DLfSNcs2aW8>
-- <https://www.quicknode.com/guides/infrastructure/node-setup/how-to-install-and-run-a-geth-node/>
-- <https://github.com/bjeabby1507/Running_a_Bitcoin_node/blob/main/README.md>
-- <https://github.com/redek-zelton/TD3---Running-a-GETH-node>
-- <https://lighthouse-book.sigmaprime.io/run_a_node.html>
-- <https://www.google.com/search?client=firefox-b-d&q=INFO+UPnP+not+available++++++++++++++++++++++error%3A+IO+error%3A+Resource+temporarily+unavailable+%28os+error+11%29%2C+service%3A+UPnP>
-- https://askubuntu.com/questions/1379425/system-has-not-been-booted-with-systemd-as-init-system-pid-1-cant-operate
-- https://github.com/microsoft/WSL/issues/8883
-- -->
+- [pools](https://ethereum.org/en/staking/pools/)
+- [lighthouse](https://lighthouse-book.sigmaprime.io/faq.html)

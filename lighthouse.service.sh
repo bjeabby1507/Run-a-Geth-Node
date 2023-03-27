@@ -5,8 +5,6 @@ After=network-online.target
 
 [Service]
 Type=simple
-# User=lighthousebeacon
-# Group=lighthousebeacon
 Restart=always
 RestartSec=5
 ExecStart=/home/bjeab/.ethereum/goerli/consensus/lighthouse/lighthouse bn \
@@ -19,6 +17,7 @@ ExecStart=/home/bjeab/.ethereum/goerli/consensus/lighthouse/lighthouse bn \
     --metrics \
     --validator-monitor-auto \
     --disable-deposit-contract-sync
+#ExecStart=/bin/bash /bin/bash /home/bjeab/run/lighthouse.sh
 
 [Install]
 WantedBy=multi-user.target

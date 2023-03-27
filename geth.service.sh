@@ -4,13 +4,11 @@ After=network.target
 Wants=network.target
 
 [Service]
-#User=goeth
-#Group=goeth
 Type=simple
 Restart=always
 RestartSec=5
 TimeoutStopSec=180
-ExecStart=geth \
+ExecStart=/usr/bin/geth \
     --goerli \
     --http \
     --http.api eth,net,web3,txpool,engine,admin \
@@ -19,6 +17,7 @@ ExecStart=geth \
     --metrics.expensive \
     --pprof \
     --authrpc.jwtsecret=/home/bjeab/.ethereum/goerli/consensus/lighthouse/jwttoken
+#ExecStart=/bin/bash /bin/bash /home/bjeab/run/geth.sh
 
 [Install]
 WantedBy=default.target
